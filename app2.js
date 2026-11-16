@@ -81,8 +81,20 @@ function nowIn(tz){
   return {date:p.year+'-'+p.month+'-'+p.day,min:(+p.hour%24)*60+(+p.minute),s:+p.second,abbr:p.timeZoneName,dow:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(p.weekday),hh:+p.hour%24,mm:p.minute};
 }
 /* Hours for a date, honoring weekly hours and holiday closures. Returns {closed,reason} or {closed:false,o,c,text} */
+/* Closed days the pharmacy sets on its account page (the Account Manager): yearly observances + dated days. Read live from the host, so a change shows
+   for everyone who opens the calendar without anyone re-saving it. Returns the day's name, or null. */
+const CLOSE_NAMES={goodfriday:'Good Friday',easter:'Easter Sunday',blackfriday:'Day After Thanksgiving',xmaseve:'Christmas Eve',nyeve:"New Year's Eve"};
+const CLOSE_BY_OBS={'Good Friday':'goodfriday','Easter Sunday':'easter','Black Friday':'blackfriday','Christmas Eve':'xmaseve',"New Year's Eve":'nyeve'};
+function pharmClosure(date){
+  const c=window.ILHOST&&ILHOST.pharmacy&&ILHOST.pharmacy.closures; if(!c)return null;
+  const md=date.slice(5);
+  for(const x of (c.days||[])) if(x.d===date||(x.y&&x.d.slice(5)===md))return x.n;
+  if((c.obs||[]).length) for(const it of US.day(date,{hol:false,obs:true})){ const id=it.kind==='obs2'&&CLOSE_BY_OBS[it.name]; if(id&&c.obs.includes(id))return CLOSE_NAMES[id]; }
+  return null;
+}
 function hoursFor(date){
   const p=S.profile;
+  const cz=pharmClosure(date); if(cz)return {closed:true,reason:cz};
   for(const it of US.day(date,{tz:p.tz,hol:true,obs:false})){ if((it.kind==='hol'||(it.kind==='obs'&&it.mon))&&p.holClosed[it.hid])return {closed:true,reason:it.name.replace(' (Observed)','')+(it.kind==='obs'?' (Observed)':'')}; }
   const h=p.hours[dowOfDate(date)]; if(!h)return {closed:true,reason:DOWN[dowOfDate(date)]+' Is A Regular Day Off'};
   const o=toMin(h.o), c=toMin(h.c);
@@ -109,7 +121,7 @@ function clockState(){
   const h12=(n.hh%12===0?12:n.hh%12); return {n,st,cls,time:h12+':'+n.mm+':'+String(n.s).padStart(2,'0')+' '+(n.hh>=12?'PM':'AM')+' '+n.abbr};
 }
 function updateClock(){ const el=$('#clock'); if(!el||!D)return; const c=clockState(); const t=$('#clkT'), s=$('#clkS'), d=$('#clkD'); if(t)t.textContent=c.time; if(d)d.textContent=longDate(c.n.date); if(s){ s.className='pill p-'+c.cls; s.textContent=c.st; } }
-const dayFacts=d=>US.day(d,{tz:S.profile.tz,hol:UI.showHol,obs:UI.showObs});
+const dayFacts=d=>{ const f=US.day(d,{tz:S.profile.tz,hol:UI.showHol,obs:UI.showObs}), cz=pharmClosure(d); return cz?[{kind:'closed',name:'Closed: '+cz,short:'Closed: '+cz,note:'The pharmacy is closed this day (set on the pharmacy account page). Tasks due this day move to the next open day.'}].concat(f):f; };
 
 /* ===== calendar data ===== */
 function calData(from,to){ const k=from+'|'+to+'|'+UI.site; if(!CAL_CACHE[k]){ CAL_CACHE[k]=IL.collect(S,D.obs,D.today,from,to,{siteId:UI.site,skipRoutine:true,adjust:adjustDue}).occs; } return CAL_CACHE[k]; }
