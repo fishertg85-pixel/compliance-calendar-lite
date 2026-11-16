@@ -110,7 +110,7 @@ const Store={db:null,kind:'memory',err:'',unsubs:[],cfgTimer:null,chain:Promise.
  put(coll,obj){ if(S.mode!=='live')return; if(!this.db){ this.saveLocal(); return; } return this.queue(()=>this.db.collection(coll).doc(obj.id).set(obj)); },
  del(coll,id){ if(S.mode!=='live')return; if(!this.db){ this.saveLocal(); return; } return this.queue(()=>this.db.collection(coll).doc(id).delete()); }
 };
-function whoAmI(){ const p=S.people.find(x=>x.id===ME); return p?p.name:'Unspecified User'; }
+function whoAmI(){ const p=S.people.find(x=>x.id===ME); return p?p.name:((window.ILHOST&&ILHOST.user&&ILHOST.user.name)||'Unspecified User'); }
 function logAct(action,detail){ const e={id:uid('l'),ts:new Date().toISOString(),by:whoAmI(),action,detail}; S.log.unshift(e); S.log=S.log.slice(0,300); Store.put('log',e); }
 function toast(m){ document.querySelectorAll('.toast').forEach(x=>x.remove()); const t=document.createElement('div'); t.className='toast'; t.textContent=m; document.body.appendChild(t); setTimeout(()=>t.remove(),3500); }
 function changed(kind){ if(kind==='config')Store.saveConfig(); else if(!Store.db)Store.saveLocal(); recompute(); render(); }

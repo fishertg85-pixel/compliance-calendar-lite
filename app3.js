@@ -30,6 +30,7 @@ function formModal(o){
 function textModal(title,text){ openModal(title,'<p class="mut" style="margin:0">Your browser blocked the file save. Select all of this text and copy it into a file.</p><textarea style="min-height:260px;font-family:var(--mono);font-size:12px" readonly id="f_txt">'+esc(text)+'</textarea>','<button class="btn pri" data-act="close">Close</button>',{nofocus:true}); }
 async function saveFile(name,data){
   let dl=null; try{ dl=await claude.use('downloads'); }catch(e){}
+  if(!dl&&window.ILHOST){ try{ const type=/\.csv$/i.test(name)?'text/csv':/\.html?$/i.test(name)?'text/html':/\.json$/i.test(name)?'application/json':'text/plain'; const u=URL.createObjectURL(new Blob([data],{type:type+';charset=utf-8'})); const a=document.createElement('a'); a.href=u; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),4000); toast('Saved '+name); return; }catch(e){} }
   if(!dl){ textModal(name,data); return; }
   try{ await dl.save({filename:name,data}); toast('Saved '+name); }catch(e){ if(e&&e.code==='declined')return; textModal(name,data); }
 }
@@ -37,7 +38,7 @@ const siteOpts=()=>[['','Not Assigned']].concat(S.sites.filter(s=>!s.archived).m
 const subjLine=t=>t.ob.title+' — '+t.subj.name;
 
 /* ===== record completion ===== */
-const needMe=()=>(S.people.some(p=>!p.archived)&&!ME)?'Select Your Name In Acting As (Top Right) First, So The Record Shows Who Did This.':'';
+const needMe=()=>(S.people.some(p=>!p.archived)&&!ME&&!(window.ILHOST&&ILHOST.user&&ILHOST.user.name))?'Select Your Name In Acting As (Top Right) First, So The Record Shows Who Did This.':'';
 let ASSETS;
 async function getAssets(){ if(ASSETS!==undefined)return ASSETS; try{ ASSETS=(window.claude&&claude.use)?await Promise.race([claude.use('assets'),new Promise(r=>setTimeout(()=>r(null),6000))]):null; }catch(e){ ASSETS=null; } return ASSETS; }
 function refreshAtt(){ const el=$('#attList'); if(el&&MODAL&&MODAL.files)el.innerHTML=attHtml(MODAL.files,true); }
@@ -548,6 +549,7 @@ function pecModal(id){
   render();
   try{ await Store.init(); }catch(e){ Store.kind='memory'; }
   if(S.mode!=='live'){ if(BLANK){ S=emptyState(); S.mode='blank'; } else S=makeDemo(); }
+  if(window.ILHOST&&ILHOST.user&&ILHOST.user.name&&!ME){ const nm=String(ILHOST.user.name).trim().toLowerCase(); const pp=S.people.find(x=>!x.archived&&String(x.name||'').trim().toLowerCase()===nm); if(pp)ME=pp.id; }
   UI.loading=false; if(!BLANK||S.mode==='live')recompute(); render();
   setInterval(()=>{ try{ if(!D)return; if(localToday()!==D.today){ recompute(); render(); } else updateClock(); }catch(e){} },1000);
 })();

@@ -23,7 +23,7 @@ with sync_playwright() as p:
     pg.click('nav.tabs button[data-v=calendar]'); pg.wait_for_timeout(300); pg.screenshot(path='blank_cal.png')
     # host adapter
     pg2=ctx.new_page(); pg2.on('pageerror',lambda e:errs.append(str(e)))
-    pg2.add_init_script("window.__saved=null;window.ILHOST={load:async()=>window.__saved,save:async(s)=>{window.__saved=JSON.parse(JSON.stringify(s));}}")
+    pg2.add_init_script("window.__saved=null;window.ILHOST={user:{name:'Test User'},canStart:true,load:async()=>window.__saved,save:async(s)=>{window.__saved=JSON.parse(JSON.stringify(s));}}")
     pg2.goto('file://'+__import__('os').getcwd()+'/calendar_blank.html'); pg2.wait_for_timeout(1200)
     pg2.click('[data-act=wizard]'); pg2.fill('#f_name','Host Pharm'); pg2.click('[data-act=msave]'); pg2.wait_for_timeout(1800)
     print('host kind:',pg2.evaluate("Store.kind"),'saved name:',pg2.evaluate("window.__saved&&window.__saved.profile.name"))
